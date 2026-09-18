@@ -8,11 +8,11 @@ AY 2026/27 and export a ready-to-import **.ics** calendar — or subscribe with 
 - Course cards with block dates, times, rooms, and teaching-day badges
 - Live conflict detection between selected courses
 - **Subscribe** (`webcal://`) — opens the platform's calendar-subscription flow with a URL that
-  encodes your selection (`/calendar/ees4205+ees4500.ics`). Handled natively by Apple Calendar
-  (iOS/macOS); elsewhere it depends on an installed calendar app that registers the scheme
-  (Outlook on Windows, GNOME Calendar on Linux, various Android apps). Calendar apps re-fetch the
-  URL on their own schedule, so schedule fixes propagate automatically. Re-subscribe after
-  changing your selection.
+  encodes your selection (`/calendar/ees4205+ees4500.ics`). Enabled once at least one course is
+  selected. Handled natively by Apple Calendar (iOS/macOS); elsewhere it depends on an installed
+  calendar app that registers the scheme (Outlook on Windows, GNOME Calendar on Linux, various
+  Android apps). Calendar apps re-fetch the URL on their own schedule, so schedule fixes propagate
+  automatically. Re-subscribe after changing your selection.
 - **Download .ics** — selection-based file export, works everywhere
 - **Google Calendar links** — prefilled weekly series per course (`recur=RRULE`), one tap + Save
 - Mobile-friendly, sticky export bar, dark mode support
@@ -77,15 +77,16 @@ bun run preview
 
 ## Deployment
 
-The main page and `/calendar.ics` (full schedule) are prerendered to edge-cached assets; the
-dynamic `/calendar/[codes].ics` endpoint runs on the Worker:
+The main page is prerendered to an edge-cached asset; the dynamic `/calendar/[codes].ics`
+endpoint runs on the Worker:
 
 ```sh
 bun run deploy
 ```
 
-The full schedule lives at `/calendar.ics`; any selection at `/calendar/<codes>.ics`
-(codes sorted, `+`-separated, lowercase).
+Selection calendars live at `/calendar/<codes>.ics` (codes sorted, `+`-separated, lowercase).
+There is intentionally no whole-program calendar: every module here is an elective, so
+subscriptions always target a selection.
 
 Note: Cloudflare's default build image ships an older Bun that cannot parse newer `bun.lock`
 versions. Pin the Worker's build variable `BUN_VERSION` (e.g. `1.4.2`) under

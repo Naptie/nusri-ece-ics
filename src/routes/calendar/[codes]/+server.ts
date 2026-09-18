@@ -13,7 +13,7 @@ export const GET: RequestHandler = ({ params }) => {
   if (!normalized) return new Response('Not found', { status: 404 });
 
   const selected = courses.filter((c) => normalized.split('+').includes(c.code.toLowerCase()));
-  const ics = buildIcs(selected, `NUSRI ECE AY26/27 (${selected.length} courses)`);
+  const ics = buildIcs(selected, `NUSRI ECE AY26/27`);
 
   return new Response(ics, {
     headers: {

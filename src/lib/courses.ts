@@ -13,6 +13,13 @@ export type DayCode = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
+/** Produce a compact day-range label, e.g. "Mon - Fri" or "Mon - Sat". */
+export function dayRangeLabel(days: DayCode[]): string {
+  const first = DAY_LABELS[days[0]];
+  const last = DAY_LABELS[days[days.length - 1]];
+  return first === last ? first : `${first} - ${last}`;
+}
+
 export type Course = {
   code: string;
   title: string;

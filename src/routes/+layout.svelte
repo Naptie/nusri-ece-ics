@@ -8,10 +8,10 @@
 
 <svelte:head>
   <link rel="icon" href={favicon}>
-  <title>NUSRI ECE Schedule → Calendar</title>
+  <title>NUSRI ECE Calendar Maker</title>
   <meta
     name="description"
-    content="Pick your ECE courses at NUSRI (Suzhou) and export a ready-to-import .ics calendar for AY 2026/27."
+    content="Pick your ECE courses at NUSRI (Suzhou) and import to your calendar for AY 2026/27."
   >
   <meta name="theme-color" content="#0a0a0a">
 </svelte:head>

@@ -8,18 +8,15 @@
   import * as Card from '$lib/components/ui/card';
   import { Checkbox } from '$lib/components/ui/checkbox';
   import { findConflicts } from '$lib/conflicts';
-  import { calendarPathFor, courses, DAY_LABELS } from '$lib/courses';
+  import { calendarPathFor, courses, dayRangeLabel } from '$lib/courses';
   import { gcalTemplateUrl } from '$lib/gcal';
   import { buildIcs } from '$lib/ics';
-  import { isApple, isAppleMobile, isWindows } from '$lib/platform';
   import { cn } from '$lib/utils';
 
   let selected = $state<string[]>([]);
-  let appleMobile = $state(false);
   let origin = $state('');
 
   onMount(() => {
-    appleMobile = isAppleMobile();
     origin = window.location.origin;
   });
 
@@ -33,34 +30,20 @@
 
   const canExport = $derived(selected.length > 0);
 
-  // Subscription URL encodes the current selection; empty selection subscribes
-  // to the full schedule. The URL itself is the persistence — the calendar app
-  // keeps re-fetching it, no per-user state involved.
+  // Subscription URL encodes the current selection; the URL itself is the
+  // persistence — the calendar app keeps re-fetching it, no per-user state
+  // involved. There is intentionally no whole-program calendar: every course
+  // here is an elective, so subscriptions always target a selection.
   //
   // webcal:// is served unconditionally: it is handled natively by Apple
   // Calendar (iOS/macOS) and by Outlook/GNOME Calendar wherever those are
   // installed. There is no browser API to query custom-scheme handlers, so
   // platforms without a handler will surface their own "no app found" dialog.
   const subscribeHref = $derived.by(() => {
-    if (!origin) return '/calendar.ics';
+    if (!origin || !canExport) return undefined;
     const host = origin.replace(/^https?:\/\//, '');
-    const path = selected.length > 0 ? calendarPathFor(selected) : null;
-    const target = path ? `/calendar/${path}.ics` : '/calendar.ics';
-    return `webcal://${host}${target}`;
+    return `webcal://${host}/calendar/${calendarPathFor(selected)}.ics`;
   });
-
-  function downloadHint(): string {
-    if (appleMobile) {
-      return 'Tap the ↓ (Downloads) icon in Safari, then tap the file — iOS offers "Add All to Calendar".';
-    }
-    if (isWindows()) {
-      return 'Double-click the file — Outlook opens each course as a recurring series for you to save.';
-    }
-    if (isApple()) {
-      return 'Open the file — Calendar offers to add all events.';
-    }
-    return 'Open the file to import all sessions into your calendar app.';
-  }
 
   function toggle(code: string, checked: boolean) {
     selected = checked ? [...selected, code] : selected.filter((c) => c !== code);
@@ -72,7 +55,9 @@
   }
 
   function icsHref(): string {
-    const blob = new Blob([buildIcs(selectedCourses)], { type: 'text/calendar;charset=utf-8' });
+    const blob = new Blob([buildIcs(selectedCourses)], {
+      type: 'text/calendar;charset=utf-8'
+    });
     const url = URL.createObjectURL(blob);
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
     return url;
@@ -85,7 +70,9 @@
     document.body.append(a);
     a.click();
     a.remove();
-    toast.success('Calendar file downloaded', { description: downloadHint() });
+    toast.success('Calendar file downloaded', {
+      description: 'Open the file to import all sessions into your calendar app.'
+    });
   }
 </script>
 
@@ -96,8 +83,7 @@
       Build your course calendar
     </h1>
     <p class="text-muted-foreground max-w-prose text-pretty sm:text-lg">
-      Tick the courses you're taking, then export a ready-to-import calendar file — or subscribe in
-      one tap. Sessions follow each course's day pattern and skip Chinese public holidays.
+      Tick the courses you're taking, then export a calendar file or subscribe in one tap.
     </p>
   </header>
 
@@ -113,30 +99,31 @@
   )}
       >
         <Card.Content class="flex h-full flex-col gap-3 px-4">
-          <div class="flex items-start justify-between gap-2">
-            <label for={`course-${course.code}`} class="flex flex-1 cursor-pointer flex-col gap-1">
-              <span class="flex items-center gap-2 font-mono text-sm font-semibold">
-                <Checkbox
-                  id={`course-${course.code}`}
-                  checked={isChecked}
-                  onCheckedChange={(v) => toggle(course.code, v === true)}
-                  aria-label={`Select ${course.code}`}
-                />
-                {course.code}
-              </span>
-              <span class="text-sm leading-snug font-medium">{course.title}</span>
+          <div class="flex items-center justify-between gap-2">
+            <label
+              for={`course-${course.code}`}
+              class="flex flex-1 cursor-pointer items-center gap-2"
+            >
+              <Checkbox
+                id={`course-${course.code}`}
+                checked={isChecked}
+                onCheckedChange={(v) => toggle(course.code, v === true)}
+                aria-label={`Select ${course.code}`}
+              />
+              <span class="font-mono text-sm font-semibold">{course.code}</span>
             </label>
+            <Badge variant="outline" class="text-[11px] shrink-0">
+              {dayRangeLabel(course.days)}
+            </Badge>
           </div>
+          <span class="text-sm leading-snug font-medium pl-6">{course.title}</span>
           <div class="mt-auto flex flex-wrap gap-1.5">
-            <Badge variant="outline" class="font-mono text-[11px]">
+            <Badge variant="outline" class="text-[11px]">
               {course.startDate.slice(5)}
               → {course.endDate.slice(5)}
             </Badge>
-            <Badge variant="outline" class="font-mono text-[11px]">{course.startTime}</Badge>
-            <Badge variant="outline" class="font-mono text-[11px]">Rm {course.room}</Badge>
-            <Badge variant="outline" class="font-mono text-[11px]">
-              {course.days.map((d) => DAY_LABELS[d].slice(0, 2)).join('·')}
-            </Badge>
+            <Badge variant="outline" class="text-[11px]">{course.startTime}</Badge>
+            <Badge variant="outline" class="text-[11px]">Rm {course.room}</Badge>
           </div>
           {#if conflicted}
             <p class="text-destructive text-xs font-medium">Overlaps another selected course</p>
@@ -149,7 +136,7 @@
   <p class="text-muted-foreground text-xs">
     Sessions follow each course's day pattern (most are Mon–Fri; EES4400 and EES4408 also include
     Saturdays). Chinese public holidays inside teaching blocks are skipped: Qingming Festival, Sat 3
-    – Mon 5 Apr 2027 (expected Sat–Mon break, no makeup workday; official arrangement due Nov 2026).
+    – Mon 5 Apr 2027.
   </p>
 
   {#if conflicts.length > 0}
@@ -202,6 +189,7 @@
         </Button>
         <Button
           href={subscribeHref}
+          disabled={!canExport}
           title="Opens a webcal:// subscription. Handled natively by Apple Calendar (iOS/macOS); elsewhere it depends on an installed calendar app (Outlook, GNOME Calendar, etc.) registering the scheme. The URL follows your selection — re-subscribe after changing courses."
         >
           <Rss />
