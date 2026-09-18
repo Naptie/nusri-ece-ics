@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { findConflicts } from './conflicts.ts';
-import type { Course } from './courses.ts';
+import { type Course, calendarPathFor } from './courses.ts';
 import { gcalTemplateUrl } from './gcal.ts';
 import { buildIcs, dayOfWeek, formatIcsLocal, teachingDates } from './ics.ts';
 
@@ -89,19 +89,23 @@ describe('buildIcs', () => {
     expect(ics).toContain('END:VCALENDAR');
   });
 
-  test('emits one concrete VEVENT per teaching day', () => {
+  test('emits one weekly series per course', () => {
+    expect((ics.match(/BEGIN:VEVENT/g) ?? []).length).toBe(1);
     expect(ics).toContain('DTSTART;TZID=Asia/Shanghai:20261019T140000');
     expect(ics).toContain('DTEND;TZID=Asia/Shanghai:20261019T170000');
-    // Friday of first week
-    expect(ics).toContain('DTSTART;TZID=Asia/Shanghai:20261023T140000');
-    // Last Friday of the block
-    expect(ics).toContain('DTSTART;TZID=Asia/Shanghai:20261106T140000');
-    // No recurrence rule; no weekend sessions
-    expect(ics).not.toContain('RRULE');
-    expect(ics).not.toContain('20261024T');
-    expect(ics).not.toContain('20261025T');
+    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;UNTIL=20261106T155959Z');
+    // No holidays in this block → no EXDATE
+    expect(ics).not.toContain('EXDATE');
     expect(ics).toContain('SUMMARY:EES4205 Silicon Power Devices and Circuits');
     expect(ics).toContain('LOCATION:Room 318');
+  });
+
+  test('excludes Qingming sessions via EXDATE', () => {
+    const ics = buildIcs([EES4400]);
+    expect(ics).toContain('DTSTART;TZID=Asia/Shanghai:20270329T140000');
+    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA;UNTIL=20270410T155959Z');
+    // Sat 3 + Mon 5 Apr sessions skipped as holidays
+    expect(ics).toContain('EXDATE;TZID=Asia/Shanghai:20270403T140000,20270405T140000');
   });
 
   test('uses CRLF line endings and trailing CRLF', () => {
@@ -170,5 +174,16 @@ describe('gcalTemplateUrl', () => {
       'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA;UNTIL=20270410T155959Z'
     );
     expect(url.searchParams.get('dates')).toBe('20270329T140000/20270329T170000');
+  });
+});
+
+describe('calendarPathFor', () => {
+  test('normalizes, dedupes, and sorts codes', () => {
+    expect(calendarPathFor(['ees4500', 'EES4205', 'ees4205'])).toBe('ees4205+ees4500');
+  });
+
+  test('rejects unknown codes and empty selections', () => {
+    expect(calendarPathFor([])).toBeNull();
+    expect(calendarPathFor(['EES9999'])).toBeNull();
   });
 });

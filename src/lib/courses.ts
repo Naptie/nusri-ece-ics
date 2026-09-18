@@ -49,6 +49,18 @@ export const holidays: Holiday[] = [
   { date: '2027-04-05', name: 'Qingming Festival' }
 ];
 
+/**
+ * Normalized path segment for a course selection, e.g. `ees4205+ees4500`
+ * (sorted, deduped, lowercase). Returns null if any code is unknown.
+ * Used to address the prerendered subset calendars under /calendar/.
+ */
+export function calendarPathFor(codes: string[]): string | null {
+  const known = new Set(courses.map((c) => c.code.toLowerCase()));
+  const normalized = [...new Set(codes.map((c) => c.toLowerCase()))].sort();
+  if (normalized.length === 0 || !normalized.every((c) => known.has(c))) return null;
+  return normalized.join('+');
+}
+
 export const courses: Course[] = [
   {
     code: 'EES4205',

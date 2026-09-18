@@ -7,13 +7,18 @@ they're taking in AY 2026/27 and export a ready-to-import **.ics** calendar file
 
 - Course cards with block dates, times, rooms, and teaching-day badges
 - Live conflict detection between selected courses
-- **Subscribe** (`webcal://`) — one-tap calendar subscription on iPhone/macOS; serves the full
-  schedule from a prerendered `/calendar.ics` and stays up to date on re-deploy
+- **Subscribe** (`webcal://`) — one-tap calendar subscription on iPhone/macOS. The subscription
+  URL encodes your selection (`/calendar/ees4205+ees4500.ics`); calendar apps re-fetch it on their
+  own schedule, so schedule fixes propagate automatically. Re-subscribe after changing your
+  selection.
 - **Download .ics** — selection-based file export, works everywhere
 - **Google Calendar links** — prefilled weekly series per course (`recur=RRULE`), one tap + Save
 - Share button where the platform supports it (Android/desktop Chromium; iOS share sheet has no
   Calendar target, so it's hidden there)
 - Mobile-friendly, sticky export bar, dark mode support
+
+ICS files use one `VEVENT` per course with a weekly `RRULE` over the course's teaching days and
+`EXDATE` entries for holidays — compact and easy to manage inside calendar apps.
 
 ## Tech stack
 
@@ -43,6 +48,18 @@ Production build (outputs to `build/`):
 bun run build
 bun run preview
 ```
+
+## Deployment
+
+Runs on Cloudflare Workers (SSR for the dynamic `/calendar/[codes].ics` endpoint, with the main
+page and `/calendar.ics` prerendered to edge-cached assets):
+
+```sh
+bun run deploy
+```
+
+The full schedule lives at `/calendar.ics`; any selection at
+`/calendar/<codes>.ics` (codes sorted, `+`-separated, lowercase).
 
 ## Data
 

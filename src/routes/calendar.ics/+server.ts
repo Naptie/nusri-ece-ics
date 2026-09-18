@@ -2,8 +2,9 @@ import { courses } from '$lib/courses';
 import { buildIcs } from '$lib/ics';
 import type { RequestHandler } from './$types';
 
-// Prerendered to a static /calendar.ics at build time (adapter-static), so
-// `webcal://<host>/calendar.ics` gives iPhone users a one-tap subscription.
+// Full schedule (all courses), prerendered to a static /calendar.ics at build
+// time and served from the edge — the default subscription when no selection
+// is made. Selection-aware subscriptions live at /calendar/[codes].ics.
 export const prerender = true;
 
 export const GET: RequestHandler = () =>

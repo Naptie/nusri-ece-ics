@@ -96,25 +96,33 @@ const VTIMEZONE = [
   'END:VTIMEZONE'
 ];
 
-/** Expands a course block into its concrete teaching dates (respecting `days`). */
-export function teachingDates(course: Course): DateParts[] {
+const RRULE_DAYS = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'] as const;
+
+/** All dates in the block falling on one of the course's teaching weekdays. */
+export function blockDates(course: Course): DateParts[] {
   const out: DateParts[] = [];
   const allowed = new Set(course.days);
-  const offDates = new Set(holidays.map((h) => h.date));
   for (
     let d = parseDate(course.startDate);
     compareDate(d, parseDate(course.endDate)) <= 0;
     d = addDays(d, 1)
   ) {
-    if (!allowed.has(dayOfWeek(d)) || offDates.has(toIsoDate(d))) continue;
-    out.push(d);
+    if (allowed.has(dayOfWeek(d))) out.push(d);
   }
   return out;
 }
 
+/** Concrete teaching dates: `blockDates` minus public holidays. */
+export function teachingDates(course: Course): DateParts[] {
+  const offDates = new Set(holidays.map((h) => h.date));
+  return blockDates(course).filter((d) => !offDates.has(toIsoDate(d)));
+}
+
 /**
- * Builds a complete VCALENDAR for the selected courses. Each course block is
- * expanded into concrete per-day VEVENTs in Asia/Shanghai local time.
+ * Builds a complete VCALENDAR for the selected courses. One VEVENT per course
+ * with a weekly RRULE over the course's teaching days, plus EXDATEs for
+ * holidays — so importing yields one manageable series per course in
+ * Asia/Shanghai local time.
  */
 export function buildIcs(selected: Course[], calendarName = 'NUSRI ECE AY26/27'): string {
   const now = new Date();
@@ -136,28 +144,42 @@ export function buildIcs(selected: Course[], calendarName = 'NUSRI ECE AY26/27')
   for (const course of selected) {
     const st = parseTime(course.startTime);
     const et = parseTime(course.endTime);
-    const dates = teachingDates(course);
-    if (dates.length === 0) continue;
+    const sessions = teachingDates(course);
+    if (sessions.length === 0) continue;
 
-    for (const d of dates) {
-      lines.push(
-        'BEGIN:VEVENT',
-        `UID:${course.code.toLowerCase()}-${toIsoDate(d).replaceAll('-', '')}@nusri-ece-ics`,
-        `DTSTAMP:${stamp}`,
-        `DTSTART;TZID=${TZID}:${formatIcsLocal(d, st)}`,
-        `DTEND;TZID=${TZID}:${formatIcsLocal(d, et)}`,
-        `SUMMARY:${escapeText(`${course.code} ${course.title}`)}`,
-        `LOCATION:${escapeText(course.room ? `Room ${course.room}` : 'NUSRI')}`,
-        `DESCRIPTION:${escapeText(
-          [
-            `${course.title} (${course.code}) — NUSRI Suzhou · AY 2026/27`,
-            `Block ${course.startDate} to ${course.endDate} (${course.days.join(', ')})`,
-            `Daily ${course.startTime}–${course.endTime} in Room ${course.room}`
-          ].join('\n')
-        )}`,
-        'END:VEVENT'
-      );
+    // RRULE expands from the first actual session; holidays become EXDATEs
+    // (they must match the occurrence start time exactly).
+    const first = sessions[0];
+    const byday = course.days.map((d) => RRULE_DAYS[d]).join(',');
+    const until = localToUtcStamp(parseDate(course.endDate), { hh: 23, mm: 59, ss: 59 });
+    const offDates = new Set(holidays.map((h) => h.date));
+    const exdates = blockDates(course).filter((d) => offDates.has(toIsoDate(d)));
+
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:${course.code.toLowerCase()}-${course.startDate.replaceAll('-', '')}@nusri-ece-ics`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;TZID=${TZID}:${formatIcsLocal(first, st)}`,
+      `DTEND;TZID=${TZID}:${formatIcsLocal(first, et)}`,
+      `RRULE:FREQ=WEEKLY;BYDAY=${byday};UNTIL=${until}`
+    );
+    if (exdates.length > 0) {
+      lines.push(`EXDATE;TZID=${TZID}:${exdates.map((d) => formatIcsLocal(d, st)).join(',')}`);
     }
+    lines.push(
+      `SUMMARY:${escapeText(`${course.code} ${course.title}`)}`,
+      `LOCATION:${escapeText(course.room ? `Room ${course.room}` : 'NUSRI')}`,
+      `DESCRIPTION:${escapeText(
+        [
+          `${course.title} (${course.code}) — NUSRI Suzhou · AY 2026/27`,
+          `Block ${course.startDate} to ${course.endDate} (${course.days
+            .map((d) => RRULE_DAYS[d])
+            .join(', ')})`,
+          `Weekly ${course.startTime}–${course.endTime} in Room ${course.room}`
+        ].join('\n')
+      )}`,
+      'END:VEVENT'
+    );
   }
 
   lines.push('END:VCALENDAR');

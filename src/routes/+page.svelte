@@ -8,7 +8,7 @@
   import * as Card from '$lib/components/ui/card';
   import { Checkbox } from '$lib/components/ui/checkbox';
   import { findConflicts } from '$lib/conflicts';
-  import { courses, DAY_LABELS } from '$lib/courses';
+  import { calendarPathFor, courses, DAY_LABELS } from '$lib/courses';
   import { gcalTemplateUrl } from '$lib/gcal';
   import { buildIcs } from '$lib/ics';
   import { canShareIcsFile, isApple, isAppleMobile } from '$lib/platform';
@@ -36,12 +36,16 @@
 
   const canExport = $derived(selected.length > 0);
 
-  // One-tap subscribe on iPhone/macOS via the webcal scheme; plain https elsewhere.
-  const subscribeHref = $derived(
-    origin && isApple()
-      ? `webcal://${origin.replace(/^https?:\/\//, '')}/calendar.ics`
-      : `${origin}/calendar.ics`
-  );
+  // Subscription URL encodes the current selection; empty selection subscribes
+  // to the full schedule. The URL itself is the persistence — the calendar app
+  // keeps re-fetching it, no per-user state involved.
+  const subscribeHref = $derived.by(() => {
+    if (!origin) return '/calendar.ics';
+    const host = origin.replace(/^https?:\/\//, '');
+    const path = selected.length > 0 ? calendarPathFor(selected) : null;
+    const target = path ? `/calendar/${path}.ics` : '/calendar.ics';
+    return isApple() ? `webcal://${host}${target}` : `${origin}${target}`;
+  });
 
   function toggle(code: string, checked: boolean) {
     selected = checked ? [...selected, code] : selected.filter((c) => c !== code);
@@ -207,7 +211,7 @@
         </Button>
         <Button
           href={subscribeHref}
-          title="One-tap on iPhone/macOS: opens the Calendar app's subscribe sheet for the full schedule (stays up to date)"
+          title="One-tap on iPhone/macOS. The subscription URL follows your current selection — re-subscribe after changing courses. Calendar apps re-fetch it automatically."
         >
           <Rss />
           Subscribe
