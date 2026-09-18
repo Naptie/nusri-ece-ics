@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Download, Share2 } from '@lucide/svelte';
+  import { Download, Rss, Share2 } from '@lucide/svelte';
+  import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
   import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
   import { Badge } from '$lib/components/ui/badge';
@@ -8,13 +9,22 @@
   import { Checkbox } from '$lib/components/ui/checkbox';
   import { findConflicts } from '$lib/conflicts';
   import { courses, DAY_LABELS } from '$lib/courses';
+  import { gcalTemplateUrl } from '$lib/gcal';
   import { buildIcs } from '$lib/ics';
+  import { canShareIcsFile, isApple, isAppleMobile } from '$lib/platform';
   import { cn } from '$lib/utils';
-
-  const blocks = [...new Set(courses.map((c) => `${c.startDate} → ${c.endDate}`))].sort();
 
   let selected = $state<string[]>([]);
   let busy = $state(false);
+  let shareSupported = $state(false);
+  let appleMobile = $state(false);
+  let origin = $state('');
+
+  onMount(() => {
+    shareSupported = canShareIcsFile() && !isAppleMobile();
+    appleMobile = isAppleMobile();
+    origin = window.location.origin;
+  });
 
   const selectedCourses = $derived(
     courses
@@ -25,6 +35,13 @@
   const conflictCodes = $derived(new Set(conflicts.flatMap((c) => [c.a.code, c.b.code])));
 
   const canExport = $derived(selected.length > 0);
+
+  // One-tap subscribe on iPhone/macOS via the webcal scheme; plain https elsewhere.
+  const subscribeHref = $derived(
+    origin && isApple()
+      ? `webcal://${origin.replace(/^https?:\/\//, '')}/calendar.ics`
+      : `${origin}/calendar.ics`
+  );
 
   function toggle(code: string, checked: boolean) {
     selected = checked ? [...selected, code] : selected.filter((c) => c !== code);
@@ -70,7 +87,9 @@
     a.click();
     a.remove();
     toast.success('Calendar file downloaded', {
-      description: 'Open it to import all sessions into your calendar app.'
+      description: appleMobile
+        ? 'Tap the ↓ (Downloads) icon in Safari, then tap the file — iOS offers "Add All to Calendar".'
+        : 'Open the file to import all sessions into your calendar app.'
     });
   }
 </script>
@@ -82,8 +101,8 @@
       Build your course calendar
     </h1>
     <p class="text-muted-foreground max-w-prose text-pretty sm:text-lg">
-      Tick the courses you're taking, then export a ready-to-import calendar file. All weekday
-      sessions (Mon–Fri) are included automatically.
+      Tick the courses you're taking, then export a ready-to-import calendar file — or subscribe in
+      one tap. Sessions follow each course's day pattern and skip Chinese public holidays.
     </p>
   </header>
 
@@ -133,8 +152,9 @@
   </section>
 
   <p class="text-muted-foreground text-xs">
-    Chinese public holidays falling inside teaching blocks are skipped: Qingming Festival, 3–5 Apr
-    2027 (provisional — the State Council's official 2027 arrangement is expected in Nov 2026).
+    Sessions follow each course's day pattern (most are Mon–Fri; EES4400 and EES4408 also include
+    Saturdays). Chinese public holidays inside teaching blocks are skipped: Qingming Festival, Sat 3
+    – Mon 5 Apr 2027 (expected Sat–Mon break, no makeup workday; official arrangement due Nov 2026).
   </p>
 
   {#if conflicts.length > 0}
@@ -185,11 +205,36 @@
           <Download />
           Download .ics
         </Button>
-        <Button onclick={share} disabled={!canExport || busy}>
-          <Share2 />
-          Share / Add to calendar
+        <Button
+          href={subscribeHref}
+          title="One-tap on iPhone/macOS: opens the Calendar app's subscribe sheet for the full schedule (stays up to date)"
+        >
+          <Rss />
+          Subscribe
         </Button>
+        {#if shareSupported}
+          <Button variant="outline" onclick={share} disabled={!canExport || busy}>
+            <Share2 />
+            Share
+          </Button>
+        {/if}
       </div>
     </div>
+    {#if selectedCourses.length > 0}
+      <div class="mt-2 flex flex-wrap items-center gap-1.5">
+        <span class="text-muted-foreground text-xs">Add to Google Calendar:</span>
+        {#each selectedCourses as course (course.code)}
+          <a
+            class="border-input bg-background hover:bg-muted rounded-md border px-2 py-1 font-mono text-[11px] transition-colors"
+            href={gcalTemplateUrl(course)}
+            target="_blank"
+            rel="noopener"
+            title="Prefilled weekly series — tap Save. Note: Google's URL can't skip the Qingming holiday days; the .ics file does."
+          >
+            {course.code}
+          </a>
+        {/each}
+      </div>
+    {/if}
   </section>
 </main>

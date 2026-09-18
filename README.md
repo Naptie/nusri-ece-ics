@@ -5,10 +5,14 @@ they're taking in AY 2026/27 and export a ready-to-import **.ics** calendar file
 
 ## Features
 
-- Course cards with block dates, time, and room badges
+- Course cards with block dates, times, rooms, and teaching-day badges
 - Live conflict detection between selected courses
-- One-shot **Share / Add to calendar** via the Web Share API (falls back to download)
-- Direct **Download .ics** button
+- **Subscribe** (`webcal://`) — one-tap calendar subscription on iPhone/macOS; serves the full
+  schedule from a prerendered `/calendar.ics` and stays up to date on re-deploy
+- **Download .ics** — selection-based file export, works everywhere
+- **Google Calendar links** — prefilled weekly series per course (`recur=RRULE`), one tap + Save
+- Share button where the platform supports it (Android/desktop Chromium; iOS share sheet has no
+  Calendar target, so it's hidden there)
 - Mobile-friendly, sticky export bar, dark mode support
 
 ## Tech stack

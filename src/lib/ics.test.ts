@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { findConflicts } from './conflicts.ts';
 import type { Course } from './courses.ts';
+import { gcalTemplateUrl } from './gcal.ts';
 import { buildIcs, dayOfWeek, formatIcsLocal, teachingDates } from './ics.ts';
 
 const EES4205: Course = {
@@ -146,5 +147,28 @@ describe('findConflicts', () => {
 
   test('no conflict on adjacent blocks', () => {
     expect(findConflicts([EES4205, EES4408])).toHaveLength(0);
+  });
+});
+
+describe('gcalTemplateUrl', () => {
+  test('encodes recurrence and timezone for a Mon–Fri course', () => {
+    const url = new URL(gcalTemplateUrl(EES4205));
+    expect(url.origin + url.pathname).toBe('https://calendar.google.com/calendar/render');
+    expect(url.searchParams.get('action')).toBe('TEMPLATE');
+    expect(url.searchParams.get('text')).toBe('EES4205 Silicon Power Devices and Circuits');
+    expect(url.searchParams.get('dates')).toBe('20261019T140000/20261019T170000');
+    expect(url.searchParams.get('recur')).toBe(
+      'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;UNTIL=20261106T155959Z'
+    );
+    expect(url.searchParams.get('ctz')).toBe('Asia/Shanghai');
+    expect(url.searchParams.get('location')).toBe('Room 318');
+  });
+
+  test('includes Saturdays for Mon–Sat courses', () => {
+    const url = new URL(gcalTemplateUrl(EES4400));
+    expect(url.searchParams.get('recur')).toBe(
+      'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA;UNTIL=20270410T155959Z'
+    );
+    expect(url.searchParams.get('dates')).toBe('20270329T140000/20270329T170000');
   });
 });

@@ -39,9 +39,9 @@ export type Holiday = {
 /**
  * Chinese public holidays falling inside teaching blocks.
  *
- * The 2027 official arrangement (国务院办公厅) is expected in Nov 2026;
- * Qingming 2027 falls on Monday 5 Apr, so a Sat–Mon break (3–5 Apr) is the
- * expected pattern — encoded provisionally until confirmed.
+ * The 2027 official arrangement (国务院办公厅) is expected in Nov 2026.
+ * Qingming 2027 falls on Monday 5 Apr, giving a Sat–Mon long weekend
+ * (3–5 Apr) with no makeup workday — encoded provisionally until confirmed.
  */
 export const holidays: Holiday[] = [
   { date: '2027-04-03', name: 'Qingming Festival (observed)' },
