@@ -1,13 +1,32 @@
-/** Apple mobile detection (iPhone/iPad/iPod, incl. iPadOS masquerading as Mac). */
-export function isAppleMobile(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent;
-  return /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1);
+function userAgent(): string {
+  return typeof navigator === 'undefined' ? '' : navigator.userAgent;
 }
 
-export function isApple(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return isAppleMobile() || /Macintosh/.test(navigator.userAgent);
+function touchPoints(): number {
+  if (typeof navigator === 'undefined') return 0;
+  return navigator.maxTouchPoints ?? 0;
+}
+
+/** iPhone/iPad/iPod, incl. iPadOS masquerading as Mac. */
+export function isAppleMobile(ua = userAgent(), touch = touchPoints()): boolean {
+  return /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && touch > 1);
+}
+
+export function isApple(ua = userAgent(), touch = touchPoints()): boolean {
+  return isAppleMobile(ua, touch) || /Macintosh/.test(ua);
+}
+
+export function isAndroid(ua = userAgent()): boolean {
+  return /Android/.test(ua);
+}
+
+export function isWindows(ua = userAgent()): boolean {
+  return /Windows/.test(ua);
+}
+
+/** Phones/tablets, where share sheets and file flows differ from desktop. */
+export function isMobile(ua = userAgent(), touch = touchPoints()): boolean {
+  return isAppleMobile(ua, touch) || isAndroid(ua);
 }
 
 /**

@@ -20,6 +20,20 @@ they're taking in AY 2026/27 and export a ready-to-import **.ics** calendar file
 ICS files use one `VEVENT` per course with a weekly `RRULE` over the course's teaching days and
 `EXDATE` entries for holidays — compact and easy to manage inside calendar apps.
 
+## Import flows per platform
+
+| Platform | One-shot import | Subscribe |
+| --- | --- | --- |
+| iPhone/iPad | Download → tap in Safari's Downloads → "Add All to Calendar" | `webcal://` → Calendar subscribe sheet |
+| Android | Download → open (calendar app picks up the file) | https download |
+| **Windows + Outlook** | Double-click the `.ics` → Outlook opens each series (`Outlook.EXE /ical`) | `webcal://` → `Outlook.EXE /share` → "Add Internet Calendar Subscription" |
+| **macOS** | Open the file → Calendar import | `webcal://` → Calendar.app subscription |
+| Google Calendar (any device) | Per-course chips → prefilled `recur=RRULE` event → Save | — |
+
+Outlook Web compose deep links are intentionally **not** offered: the parameter set (verified
+against `add-event-to-calendar-docs`) has no recurrence support, so a 2–3 week course block would
+need a separate link per session. The downloaded `.ics` carries the whole series correctly.
+
 ## Tech stack
 
 - [SvelteKit](https://svelte.dev/docs/kit) (static adapter, prerendered) + TypeScript

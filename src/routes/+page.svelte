@@ -11,7 +11,7 @@
   import { calendarPathFor, courses, DAY_LABELS } from '$lib/courses';
   import { gcalTemplateUrl } from '$lib/gcal';
   import { buildIcs } from '$lib/ics';
-  import { canShareIcsFile, isApple, isAppleMobile } from '$lib/platform';
+  import { canShareIcsFile, isApple, isAppleMobile, isMobile, isWindows } from '$lib/platform';
   import { cn } from '$lib/utils';
 
   let selected = $state<string[]>([]);
@@ -39,13 +39,32 @@
   // Subscription URL encodes the current selection; empty selection subscribes
   // to the full schedule. The URL itself is the persistence — the calendar app
   // keeps re-fetching it, no per-user state involved.
+  //
+  // Desktops (macOS Calendar, Windows Outlook, GNOME Calendar) and Apple
+  // devices get webcal://, which opens the app's native subscription flow.
+  // Non-Apple phones fall back to an https download — their calendar apps
+  // handle the file when opened.
   const subscribeHref = $derived.by(() => {
     if (!origin) return '/calendar.ics';
     const host = origin.replace(/^https?:\/\//, '');
     const path = selected.length > 0 ? calendarPathFor(selected) : null;
     const target = path ? `/calendar/${path}.ics` : '/calendar.ics';
-    return isApple() ? `webcal://${host}${target}` : `${origin}${target}`;
+    if (isMobile() && !isApple()) return `${origin}${target}`;
+    return `webcal://${host}${target}`;
   });
+
+  function downloadHint(): string {
+    if (appleMobile) {
+      return 'Tap the ↓ (Downloads) icon in Safari, then tap the file — iOS offers "Add All to Calendar".';
+    }
+    if (isWindows()) {
+      return 'Double-click the file — Outlook opens each course as a recurring series for you to save.';
+    }
+    if (isApple()) {
+      return 'Open the file — Calendar offers to add all events.';
+    }
+    return 'Open the file to import all sessions into your calendar app.';
+  }
 
   function toggle(code: string, checked: boolean) {
     selected = checked ? [...selected, code] : selected.filter((c) => c !== code);
@@ -90,11 +109,7 @@
     document.body.append(a);
     a.click();
     a.remove();
-    toast.success('Calendar file downloaded', {
-      description: appleMobile
-        ? 'Tap the ↓ (Downloads) icon in Safari, then tap the file — iOS offers "Add All to Calendar".'
-        : 'Open the file to import all sessions into your calendar app.'
-    });
+    toast.success('Calendar file downloaded', { description: downloadHint() });
   }
 </script>
 
@@ -211,7 +226,7 @@
         </Button>
         <Button
           href={subscribeHref}
-          title="One-tap on iPhone/macOS. The subscription URL follows your current selection — re-subscribe after changing courses. Calendar apps re-fetch it automatically."
+          title="Opens your calendar app's subscription flow (Apple Calendar on Apple devices, Outlook on Windows). The URL follows your selection — re-subscribe after changing courses."
         >
           <Rss />
           Subscribe
