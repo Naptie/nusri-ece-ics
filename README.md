@@ -1,16 +1,17 @@
 # NUSRI ECE AY26/27 Schedule → Calendar (.ics)
 
-A static SvelteKit site that lets ECE students at NUSRI (Suzhou) pick the courses
-they're taking in AY 2026/27 and export a ready-to-import **.ics** calendar file.
+A SvelteKit site that lets ECE students at NUSRI (Suzhou) pick the courses they're taking in
+AY 2026/27 and export a ready-to-import **.ics** calendar — or subscribe with one tap.
 
 ## Features
 
 - Course cards with block dates, times, rooms, and teaching-day badges
 - Live conflict detection between selected courses
-- **Subscribe** (`webcal://`) — one-tap calendar subscription on iPhone/macOS. The subscription
-  URL encodes your selection (`/calendar/ees4205+ees4500.ics`); calendar apps re-fetch it on their
-  own schedule, so schedule fixes propagate automatically. Re-subscribe after changing your
-  selection.
+- **Subscribe** (`webcal://`) — opens the native subscription flow of the platform's calendar app
+  (Calendar.app on Apple devices, Outlook's "Add Internet Calendar Subscription" on Windows,
+  GNOME Calendar on Linux). The subscription URL encodes your selection
+  (`/calendar/ees4205+ees4500.ics`); calendar apps re-fetch it on their own schedule, so schedule
+  fixes propagate automatically. Re-subscribe after changing your selection.
 - **Download .ics** — selection-based file export, works everywhere
 - **Google Calendar links** — prefilled weekly series per course (`recur=RRULE`), one tap + Save
 - Share button where the platform supports it (Android/desktop Chromium; iOS share sheet has no
@@ -36,10 +37,12 @@ need a separate link per session. The downloaded `.ics` carries the whole series
 
 ## Tech stack
 
-- [SvelteKit](https://svelte.dev/docs/kit) (static adapter, prerendered) + TypeScript
+- [SvelteKit](https://svelte.dev/docs/kit) + TypeScript — prerendered page + SSR endpoint,
+  deployed to [Cloudflare Workers](https://developers.cloudflare.com/workers/)
 - [Tailwind CSS v4](https://tailwindcss.com) + [shadcn-svelte](https://shadcn-svelte.com) (vega preset)
 - [Biome](https://biomejs.dev) for lint + format
 - [Bun](https://bun.sh) for runtime, tests, and package management
+- [Wrangler](https://developers.cloudflare.com/workers/wrangler/) for local preview + deploy
 
 ## Development
 
@@ -56,7 +59,8 @@ bun run check
 bun run lint
 ```
 
-Production build (outputs to `build/`):
+Production build (outputs to `.svelte-kit/cloudflare`) and local preview through the Worker
+runtime:
 
 ```sh
 bun run build
@@ -65,15 +69,19 @@ bun run preview
 
 ## Deployment
 
-Runs on Cloudflare Workers (SSR for the dynamic `/calendar/[codes].ics` endpoint, with the main
-page and `/calendar.ics` prerendered to edge-cached assets):
+The main page and `/calendar.ics` (full schedule) are prerendered to edge-cached assets; the
+dynamic `/calendar/[codes].ics` endpoint runs on the Worker:
 
 ```sh
 bun run deploy
 ```
 
-The full schedule lives at `/calendar.ics`; any selection at
-`/calendar/<codes>.ics` (codes sorted, `+`-separated, lowercase).
+The full schedule lives at `/calendar.ics`; any selection at `/calendar/<codes>.ics`
+(codes sorted, `+`-separated, lowercase).
+
+Note: Cloudflare's default build image ships an older Bun that cannot parse newer `bun.lock`
+versions. Pin the Worker's build variable `BUN_VERSION` (e.g. `1.4.2`) under
+**Settings → Build → Build Variables and Secrets** so `bun install --frozen-lockfile` succeeds.
 
 ## Data
 
@@ -88,8 +96,15 @@ Course data lives in `src/lib/courses.ts`. Each entry:
   startTime: '14:00',
   endTime: '17:00',
   room: '318',
+  days: [0, 1, 2, 3, 4], // teaching weekdays, 0 = Mon … 6 = Sun
 }
 ```
 
-Sessions are emitted as weekday (MO–FR) recurring events in `Asia/Shanghai`
-with a VTIMEZONE block, so imports land on the correct local time.
+Day-off patterns follow the academic calendar: most blocks are Mon–Fri ("Sat, Sun off");
+EES4400 and EES4408 include Saturdays ("Sun off"). Sessions are emitted as recurring events
+in `Asia/Shanghai` with a `VTIMEZONE` block, so imports land on the correct local time.
+
+Chinese public holidays inside teaching blocks are encoded in the `holidays` array and become
+`EXDATE` entries: Qingming Festival, Sat 3 – Mon 5 Apr 2027 (expected Sat–Mon break, no makeup
+workday; the State Council's official 2027 arrangement is due Nov 2026 — update `holidays`
+then and re-deploy; subscribers pick it up automatically).
