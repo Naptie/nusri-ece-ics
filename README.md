@@ -7,15 +7,14 @@ AY 2026/27 and export a ready-to-import **.ics** calendar — or subscribe with 
 
 - Course cards with block dates, times, rooms, and teaching-day badges
 - Live conflict detection between selected courses
-- **Subscribe** (`webcal://`) — opens the native subscription flow of the platform's calendar app
-  (Calendar.app on Apple devices, Outlook's "Add Internet Calendar Subscription" on Windows,
-  GNOME Calendar on Linux). The subscription URL encodes your selection
-  (`/calendar/ees4205+ees4500.ics`); calendar apps re-fetch it on their own schedule, so schedule
-  fixes propagate automatically. Re-subscribe after changing your selection.
+- **Subscribe** (`webcal://`) — opens the platform's calendar-subscription flow with a URL that
+  encodes your selection (`/calendar/ees4205+ees4500.ics`). Handled natively by Apple Calendar
+  (iOS/macOS); elsewhere it depends on an installed calendar app that registers the scheme
+  (Outlook on Windows, GNOME Calendar on Linux, various Android apps). Calendar apps re-fetch the
+  URL on their own schedule, so schedule fixes propagate automatically. Re-subscribe after
+  changing your selection.
 - **Download .ics** — selection-based file export, works everywhere
 - **Google Calendar links** — prefilled weekly series per course (`recur=RRULE`), one tap + Save
-- Share button where the platform supports it (Android/desktop Chromium; iOS share sheet has no
-  Calendar target, so it's hidden there)
 - Mobile-friendly, sticky export bar, dark mode support
 
 ICS files use one `VEVENT` per course with a weekly `RRULE` over the course's teaching days and
@@ -25,11 +24,20 @@ ICS files use one `VEVENT` per course with a weekly `RRULE` over the course's te
 
 | Platform | One-shot import | Subscribe |
 | --- | --- | --- |
-| iPhone/iPad | Download → tap in Safari's Downloads → "Add All to Calendar" | `webcal://` → Calendar subscribe sheet |
-| Android | Download → open (calendar app picks up the file) | https download |
+| iPhone/iPad | Download → tap in Safari's Downloads → "Add All to Calendar" | `webcal://` → Calendar subscribe sheet (native) |
+| Android | Download → open (calendar app picks up the file) | `webcal://` (needs an app that registers the scheme) |
 | **Windows + Outlook** | Double-click the `.ics` → Outlook opens each series (`Outlook.EXE /ical`) | `webcal://` → `Outlook.EXE /share` → "Add Internet Calendar Subscription" |
-| **macOS** | Open the file → Calendar import | `webcal://` → Calendar.app subscription |
+| **macOS** | Open the file → Calendar import | `webcal://` → Calendar.app subscription (native) |
 | Google Calendar (any device) | Per-course chips → prefilled `recur=RRULE` event → Save | — |
+
+No platform's share sheet accepts `.ics` files as a calendar-import target (iOS rejects the file
+type outright; Windows Chromium advertises `canShare` but rejects the share with
+`NotAllowedError`), so there is no Share button — Subscribe and Download cover the flows.
+
+`webcal://` is not an IETF standard scheme: Apple integrates it at the OS level (iOS/macOS), and
+other platforms only handle it if a calendar app registered the handler. There is no browser API
+to query custom-scheme handlers, so the link is always served unconditionally; platforms without
+a handler surface their own "no app found" dialog.
 
 Outlook Web compose deep links are intentionally **not** offered: the parameter set (verified
 against `add-event-to-calendar-docs`) has no recurrence support, so a 2–3 week course block would

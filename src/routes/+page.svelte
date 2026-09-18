@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Download, Rss, Share2 } from '@lucide/svelte';
+  import { Download, Rss } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
   import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
@@ -11,17 +11,14 @@
   import { calendarPathFor, courses, DAY_LABELS } from '$lib/courses';
   import { gcalTemplateUrl } from '$lib/gcal';
   import { buildIcs } from '$lib/ics';
-  import { canShareIcsFile, isApple, isAppleMobile, isMobile, isWindows } from '$lib/platform';
+  import { isApple, isAppleMobile, isWindows } from '$lib/platform';
   import { cn } from '$lib/utils';
 
   let selected = $state<string[]>([]);
-  let busy = $state(false);
-  let shareSupported = $state(false);
   let appleMobile = $state(false);
   let origin = $state('');
 
   onMount(() => {
-    shareSupported = canShareIcsFile() && !isAppleMobile();
     appleMobile = isAppleMobile();
     origin = window.location.origin;
   });
@@ -40,16 +37,15 @@
   // to the full schedule. The URL itself is the persistence — the calendar app
   // keeps re-fetching it, no per-user state involved.
   //
-  // Desktops (macOS Calendar, Windows Outlook, GNOME Calendar) and Apple
-  // devices get webcal://, which opens the app's native subscription flow.
-  // Non-Apple phones fall back to an https download — their calendar apps
-  // handle the file when opened.
+  // webcal:// is served unconditionally: it is handled natively by Apple
+  // Calendar (iOS/macOS) and by Outlook/GNOME Calendar wherever those are
+  // installed. There is no browser API to query custom-scheme handlers, so
+  // platforms without a handler will surface their own "no app found" dialog.
   const subscribeHref = $derived.by(() => {
     if (!origin) return '/calendar.ics';
     const host = origin.replace(/^https?:\/\//, '');
     const path = selected.length > 0 ? calendarPathFor(selected) : null;
     const target = path ? `/calendar/${path}.ics` : '/calendar.ics';
-    if (isMobile() && !isApple()) return `${origin}${target}`;
     return `webcal://${host}${target}`;
   });
 
@@ -80,26 +76,6 @@
     const url = URL.createObjectURL(blob);
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
     return url;
-  }
-
-  async function share() {
-    const file = new File([buildIcs(selectedCourses)], icsFileName(), {
-      type: 'text/calendar'
-    });
-    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-    if (nav.share && (!nav.canShare || nav.canShare({ files: [file] }))) {
-      try {
-        busy = true;
-        await nav.share({ files: [file], title: 'NUSRI ECE AY26/27 schedule' });
-        return;
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') return;
-        // fall through to download
-      } finally {
-        busy = false;
-      }
-    }
-    download();
   }
 
   function download() {
@@ -220,23 +196,17 @@
         {/if}
       </p>
       <div class="flex gap-2 max-sm:grid max-sm:grid-cols-2">
-        <Button variant="outline" onclick={download} disabled={!canExport || busy}>
+        <Button variant="outline" onclick={download} disabled={!canExport}>
           <Download />
           Download .ics
         </Button>
         <Button
           href={subscribeHref}
-          title="Opens your calendar app's subscription flow (Apple Calendar on Apple devices, Outlook on Windows). The URL follows your selection — re-subscribe after changing courses."
+          title="Opens a webcal:// subscription. Handled natively by Apple Calendar (iOS/macOS); elsewhere it depends on an installed calendar app (Outlook, GNOME Calendar, etc.) registering the scheme. The URL follows your selection — re-subscribe after changing courses."
         >
           <Rss />
           Subscribe
         </Button>
-        {#if shareSupported}
-          <Button variant="outline" onclick={share} disabled={!canExport || busy}>
-            <Share2 />
-            Share
-          </Button>
-        {/if}
       </div>
     </div>
     {#if selectedCourses.length > 0}
