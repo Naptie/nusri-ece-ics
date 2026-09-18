@@ -1,4 +1,4 @@
-import { type Course, type DayCode, TZID } from './courses.ts';
+import { type Course, type DayCode, holidays, TZID } from './courses.ts';
 
 function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
@@ -36,7 +36,7 @@ export function addDays(d: DateParts, n: number): DateParts {
 
 /** 0 = Monday … 6 = Sunday. */
 export function dayOfWeek(d: DateParts): DayCode {
-	return ((new Date(Date.UTC(d.y, d.m - 1, d.d)).getUTCDay() + 6) % 7) as DayCode;
+  return ((new Date(Date.UTC(d.y, d.m - 1, d.d)).getUTCDay() + 6) % 7) as DayCode;
 }
 
 export function toIsoDate(d: DateParts): string {
@@ -100,12 +100,14 @@ const VTIMEZONE = [
 export function teachingDates(course: Course): DateParts[] {
   const out: DateParts[] = [];
   const allowed = new Set(course.days);
+  const offDates = new Set(holidays.map((h) => h.date));
   for (
     let d = parseDate(course.startDate);
     compareDate(d, parseDate(course.endDate)) <= 0;
     d = addDays(d, 1)
   ) {
-    if (allowed.has(dayOfWeek(d))) out.push(d);
+    if (!allowed.has(dayOfWeek(d)) || offDates.has(toIsoDate(d))) continue;
+    out.push(d);
   }
   return out;
 }

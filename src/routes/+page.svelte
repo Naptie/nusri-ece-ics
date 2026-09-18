@@ -132,6 +132,11 @@
     {/each}
   </section>
 
+  <p class="text-muted-foreground text-xs">
+    Chinese public holidays falling inside teaching blocks are skipped: Qingming Festival, 3–5 Apr
+    2027 (provisional — the State Council's official 2027 arrangement is expected in Nov 2026).
+  </p>
+
   {#if conflicts.length > 0}
     <Alert variant="destructive">
       <svg

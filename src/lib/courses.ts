@@ -30,6 +30,25 @@ export type Course = {
 const MON_FRI: DayCode[] = [0, 1, 2, 3, 4];
 const MON_SAT: DayCode[] = [0, 1, 2, 3, 4, 5];
 
+export type Holiday = {
+  /** ISO date (YYYY-MM-DD). */
+  date: string;
+  name: string;
+};
+
+/**
+ * Chinese public holidays falling inside teaching blocks.
+ *
+ * The 2027 official arrangement (国务院办公厅) is expected in Nov 2026;
+ * Qingming 2027 falls on Monday 5 Apr, so a Sat–Mon break (3–5 Apr) is the
+ * expected pattern — encoded provisionally until confirmed.
+ */
+export const holidays: Holiday[] = [
+  { date: '2027-04-03', name: 'Qingming Festival (observed)' },
+  { date: '2027-04-04', name: 'Qingming Festival (observed)' },
+  { date: '2027-04-05', name: 'Qingming Festival' }
+];
+
 export const courses: Course[] = [
   {
     code: 'EES4205',

@@ -50,10 +50,22 @@ describe('teachingDates', () => {
 
   test('includes Saturdays for Mon–Sat courses', () => {
     const dates = teachingDates(EES4400);
-    // 29 Mar – 10 Apr 2027 = 2 weeks: Mon–Sat ×2 = 12 sessions
-    expect(dates).toHaveLength(12);
+    // 29 Mar – 10 Apr 2027: Mon–Sat ×2 = 12 minus Qingming (Sat 3 + Mon 5 Apr) = 10
+    expect(dates).toHaveLength(10);
     const last = dates[dates.length - 1];
     expect(last).toEqual({ y: 2027, m: 4, d: 10 });
+  });
+
+  test('excludes Qingming Festival 2027 (3–5 Apr)', () => {
+    // Mon–Sat block spanning Qingming: Sat 3 Apr and Mon 5 Apr are holidays
+    const dates = teachingDates({
+      ...EES4400,
+      startDate: '2027-03-31',
+      endDate: '2027-04-06'
+    });
+    // Wed 31, Thu 1, Fri 2, Tue 6 — Sat 3 + Mon 5 skipped as holidays
+    expect(dates).toHaveLength(4);
+    expect(dates.map((d) => `${d.m}-${d.d}`)).toEqual(['3-31', '4-1', '4-2', '4-6']);
   });
 });
 
