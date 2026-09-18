@@ -171,7 +171,7 @@ export function buildIcs(selected: Course[], calendarName = 'NUSRI ECE AY26/27')
       `LOCATION:${escapeText(course.room ? `Room ${course.room}, National University of Singapore Suzhou Research Institute` : 'National University of Singapore Suzhou Research Institute')}`,
       `DESCRIPTION:${escapeText(
         [
-          `${course.title} (${course.code}) — NUSRI Suzhou · AY 2026/27`,
+          `${course.title} (${course.code}) — NUSRI ECE`,
           `Block ${course.startDate} to ${course.endDate} (${course.days
             .map((d) => RRULE_DAYS[d])
             .join(', ')})`,

@@ -78,7 +78,7 @@
 
 <main class="mx-auto flex min-h-dvh w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
   <header class="flex flex-col gap-2 text-center sm:items-center">
-    <Badge variant="secondary" class="w-fit">NUSRI Suzhou · ECE · AY 2026/27</Badge>
+    <Badge variant="secondary" class="w-fit">NUSRI ECE · AY 2026/27</Badge>
     <h1 class="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
       Build your course calendar
     </h1>

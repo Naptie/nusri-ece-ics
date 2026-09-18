@@ -24,7 +24,7 @@ export function gcalTemplateUrl(course: Course): string {
     dates: `${formatIcsLocal(first, st)}/${formatIcsLocal(first, et)}`,
     recur: `RRULE:FREQ=WEEKLY;BYDAY=${rruleDays};UNTIL=${until}`,
     location: `Room ${course.room}`,
-    details: `${course.title} (${course.code}) — NUSRI Suzhou · AY 2026/27 · block ${course.startDate} → ${course.endDate} · ${course.startTime}–${course.endTime}`,
+    details: `${course.title} (${course.code}) — NUSRI ECE · block ${course.startDate} → ${course.endDate} · ${course.startTime}–${course.endTime}`,
     ctz: 'Asia/Shanghai'
   });
   return `https://calendar.google.com/calendar/render?${params}`;
